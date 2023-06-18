@@ -2,10 +2,13 @@
 from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.response import Response
+from django.core.serializers import serialize
 from django.core import serializers
 from django.http.response import JsonResponse
+from django.http import HttpResponse
 from rest_framework.parsers import JSONParser 
 from rest_framework import status
+import json 
 
 from apis.models import SchoolStructure, Schools, Classes, Personnel, Subjects, StudentSubjectsScore
 from apis.serializers import SchoolStructureSerializer,StudentSubjectsScoreSerializer,SubjectsSerializer,PersonnelSerializer,ClassesSerializer
@@ -16,55 +19,64 @@ class StudentSubjectsScoreAPIView(APIView):
     @staticmethod
     def post(request, *args, **kwargs):
 
-        # try:
-        #     title = request.data.get("title", None)
-        #     print("Title : ",title)
-        #     parent = request.data.get("parent", None)
-        #     print("Parent : ",parent)
-        #     SchoolStructure.objects.create(title=title)
-        #     return Response(SchoolStructureSerializer.data, status=status.HTTP_201_CREATED) 
-        # except:
-        #     return Response(SchoolStructureSerializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        # [Backend API and Data Validations Skill Test]
+
+        # description: create API Endpoint for insert score data of each student by following rules.
+
+        # rules:      - Score must be number, equal or greater than 0 and equal or less than 100.
+        #             - Credit must be integer, greater than 0 and equal or less than 3.
+        #             - Payload data must be contained `first_name`, `last_name`, `subject_title` and `score`.
+        #                 - `first_name` in payload must be string (if not return bad request status).
+        #                 - `last_name` in payload must be string (if not return bad request status).
+        #                 - `subject_title` in payload must be string (if not return bad request status).
+        #                 - `score` in payload must be number (if not return bad request status).
+
+        #             - Student's score of each subject must be unique (it's mean 1 student only have 1 row of score
+        #                     of each subject).
+        #             - If student's score of each subject already existed, It will update new score
+        #                     (Don't created it).
+        #             - If Update, Credit must not be changed.
+        #             - If Data Payload not complete return clearly message with bad request status.
+        #             - If Subject's Name or Student's Name not found in Database return clearly message with bad request status.
+        #             - If Success return student's details, subject's title, credit and score context with created status.
+
+        # remark:     - `score` is subject's score of each student.
+        #             - `credit` is subject's credit.
+        #             - student's first name, lastname and subject's title can find in DATABASE (you can create more
+        #                     for test add new score).
         
-        tutorial_data = JSONParser().parse(request)
-        tutorial_serializer = SchoolStructureSerializer(data=tutorial_data)
-        title = tutorial_serializer.data.get("title", None)
-        print("Title : ",title)
-        parent = tutorial_serializer.data.get("parent", None)
-        print("Parent : ",parent)
-        if tutorial_serializer.is_valid():
-            tutorial_serializer.save()
-            return JsonResponse(tutorial_serializer.data, status=status.HTTP_201_CREATED) 
-        return JsonResponse(tutorial_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-        """
-        [Backend API and Data Validations Skill Test]
+        # studentsubjectsscore = JSONParser().parse(request)
 
-        description: create API Endpoint for insert score data of each student by following rules.
+        first_name = request.data.get("first_name", None)
+        last_name = request.data.get("last_name", None)
+        subject_title = request.data.get("subject_title", None)
+        credit = request.data.get("credit", None)
+        score = request.data.get("score", None)
 
-        rules:      - Score must be number, equal or greater than 0 and equal or less than 100.
-                    - Credit must be integer, greater than 0 and equal or less than 3.
-                    - Payload data must be contained `first_name`, `last_name`, `subject_title` and `score`.
-                        - `first_name` in payload must be string (if not return bad request status).
-                        - `last_name` in payload must be string (if not return bad request status).
-                        - `subject_title` in payload must be string (if not return bad request status).
-                        - `score` in payload must be number (if not return bad request status).
+        print("first_name : ",first_name)
+        print("last_name : ",last_name)
+        print("subject_title : ",subject_title)
+        print("credit : ",credit)
+        print("score : ",score)
 
-                    - Student's score of each subject must be unique (it's mean 1 student only have 1 row of score
-                            of each subject).
-                    - If student's score of each subject already existed, It will update new score
-                            (Don't created it).
-                    - If Update, Credit must not be changed.
-                    - If Data Payload not complete return clearly message with bad request status.
-                    - If Subject's Name or Student's Name not found in Database return clearly message with bad request status.
-                    - If Success return student's details, subject's title, credit and score context with created status.
+        if 0 <= score <= 100 and 0<= credit <= 3:
+            personnel_result = Personnel.objects.filter(first_name=first_name,last_name=last_name).first()
+            subjects_result = Subjects.objects.filter(title=subject_title).first()
+            print("personnel id :",personnel_result.id)
+            print("subjects_result id :",subjects_result.id)
 
-        remark:     - `score` is subject's score of each student.
-                    - `credit` is subject's credit.
-                    - student's first name, lastname and subject's title can find in DATABASE (you can create more
-                            for test add new score).
-
-        """
+            serialiser = StudentSubjectsScore(credit=credit,score=score)
+            serialiser.student_id = personnel_result.id
+            serialiser.subjects_id = subjects_result.id
+            serialiser.save()
+            
+            # StudentSubjectsScore.objects.create(student=personnel_result.id, subjects=subjects_result.id, credit=credit,score=score)
+            # if serialiser.is_valid():
+            #     serialiser.save()
+            return Response(serialiser.data, status=status.HTTP_201_CREATED)
+        else:
+            return Response(serialiser.errors, status=status.HTTP_400_BAD_REQUEST)
 
         subjects_context = [{"id": 1, "title": "Math"}, {"id": 2, "title": "Physics"}, {"id": 3, "title": "Chemistry"},
                             {"id": 4, "title": "Algorithm"}, {"id": 5, "title": "Coding"}]
@@ -76,11 +88,6 @@ class StudentSubjectsScoreAPIView(APIView):
         credits_mapping = [{"subject_id": 1, "credit_id": 9}, {"subject_id": 2, "credit_id": 7},
                            {"subject_id": 3, "credit_id": 6}, {"subject_id": 4, "credit_id": 7},
                            {"subject_id": 5, "credit_id": 9}]
-
-        student_first_name = request.data.get("first_name", None)
-        student_last_name = request.data.get("last_name", None)
-        subjects_title = request.data.get("subject_title", None)
-        score = request.data.get("score", None)
 
         # # Filter Objects Example
         # DataModel.objects.filter(filed_1=value_1, filed_2=value_2, filed_2=value_3)
@@ -111,9 +118,7 @@ class StudentSubjectsScoreDetailsAPIView(APIView):
                                       D+ if 55 <= score < 60
                                       D  if 50 <= score < 55
                                       F  if score < 50
-
         """
-
         # example_context_data = {
         #     "student":
         #         {
@@ -169,48 +174,7 @@ class StudentSubjectsScoreDetailsAPIView(APIView):
 
                 print("Grade :",grade_point_average)
                 personnel = Personnel.objects.filter(id=res.id)
-
-                # example_context_data = []
-                # for per in personnel:
-                #     item = {'grade_point_average': grade_point_average, 'data': []}   #Add key(data)-value(empty list)
-                #     #append to `data`
-                #     item['data'].append({
-                #         "id": res.id,
-                #         "student": res.student,
-                #         "subjects": res.subjects,
-                #         "credit": res.credit,
-                #         "score": res.score
-                #             }
-                #         )
-                #     example_context_data.append(item)
-                # print(example_context_data)
-
-
-                # example_context_data = {
-                #     "student":
-                #         {
-                #             "id": id,
-                #             "full_name": "student's full name",
-                #             "school": "student's school name"
-                #         },
-
-                #     "subject_detail": [
-                #         {
-                #         "subject": "subject's title 1",
-                #                     "credit": "subject's credit 1",
-                #                     "score": "subject's score 1",
-                #                     "grade": "subject's grade 1",
-                #                 },
-                #                 {
-                #                     "subject": "subject's title 2",
-                #                     "credit": "subject's credit 2",
-                #                     "score": "subject's score 2",
-                #                     "grade": "subject's grade 2",
-                #                 },
-                #             ],
-
-                #             "grade_point_average": grade_point_average,
-                #         }
+                
 
         serializer = StudentSubjectsScoreSerializer(stuSybScore, many=True)
        
@@ -236,14 +200,39 @@ class PersonnelDetailsAPIView(APIView):
                     - Personnel's details order must be ordered by their role, their class order and their name.
 
         """
-
-        personnel_detail = Personnel.objects.all()
         school_title = self.kwargs['school_title']
-        print("school_title : ",school_title)
-       
-        personnel_Serializer = PersonnelSerializer(personnel_detail, many=True)
-        return JsonResponse(personnel_Serializer.data, safe=False)
+        my_dict = {"data_pattern":[]}
 
+        personnel_results = Personnel.objects.select_related('school_class').all()
+
+        if school_title is not None:
+
+            classes_result = Classes.objects.select_related('school').filter(school__title__contains=str(school_title)).first()
+            print("classes id :",classes_result.id)
+
+            personnel_results = Personnel.objects.select_related('school_class').filter(school_class__id=classes_result.id).order_by('personnel_type')
+
+        for data in personnel_results:
+                school_name = str(data.school_class.school)
+                class_order = str(data.school_class.class_order)
+                fullname = str(data.first_name+" "+data.last_name)
+                role = ""
+                if data.personnel_type == 0:
+                    role = "class_teacher"
+                elif data.personnel_type == 1:
+                    role = "head_of_the_room"
+                elif data.personnel_type == 2:
+                    role = "student"
+                
+                my_dict["data_pattern"].append({ 
+                        "school": school_name, 
+                        "role": role, 
+                        "class": class_order,
+                        "name": fullname,
+                        })
+
+        return HttpResponse(json.dumps(my_dict), content_type='application/json')
+    
         data_pattern = [
             "1. school: Dorm Palace School, role: Teacher, class: 1,name: Mark Harmon",
             "2. school: Dorm Palace School, role: Teacher, class: 2,name: Jared Sanchez",
@@ -306,10 +295,6 @@ class PersonnelDetailsAPIView(APIView):
             "59. school: Dorm Palace School, role: Student, class: 5,name: Pamela Sutton",
             "60. school: Dorm Palace School, role: Student, class: 5,name: Sarah Murphy"
         ]
-
-        school_title = kwargs.get("school_title", None)
-
-        your_result = []
 
         return Response(your_result, status=status.HTTP_400_BAD_REQUEST)
 
