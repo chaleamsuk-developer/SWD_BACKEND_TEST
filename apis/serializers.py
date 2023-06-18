@@ -18,16 +18,16 @@ class SchoolsSerializer(serializers.ModelSerializer):
         fields = ('title')
 
 class ClassesSerializer(serializers.ModelSerializer):
-    schools = SchoolsSerializer(many=True, read_only=True)
+    school = SchoolsSerializer(many=True, read_only=True)
     class Meta:
         model = Classes
-        fields = ('class_order','schools')
+        fields = '__all__' 
 
 class PersonnelSerializer(serializers.ModelSerializer):
     classes = ClassesSerializer(many=True, read_only=True)
     class Meta:
         model = Personnel
-        fields = ('first_name','last_name','personnel_type','classes')
+        fields = '__all__' 
 
 class StudentSubjectsScoreSerializer(serializers.ModelSerializer):
     personel = PersonnelSerializer(many=True, read_only=True)
