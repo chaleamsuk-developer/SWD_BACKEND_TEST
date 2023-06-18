@@ -48,6 +48,8 @@ class StudentSubjectsScoreAPIView(APIView):
 
         # studentsubjectsscore = JSONParser().parse(request)
 
+        dict = {"data_pattern":[]}
+
         first_name = request.data.get("first_name", None)
         last_name = request.data.get("last_name", None)
         subject_title = request.data.get("subject_title", None)
@@ -65,18 +67,29 @@ class StudentSubjectsScoreAPIView(APIView):
             subjects_result = Subjects.objects.filter(title=subject_title).first()
             print("personnel id :",personnel_result.id)
             print("subjects_result id :",subjects_result.id)
-
-            serialiser = StudentSubjectsScore(credit=credit,score=score)
-            serialiser.student_id = personnel_result.id
-            serialiser.subjects_id = subjects_result.id
-            serialiser.save()
             
-            # StudentSubjectsScore.objects.create(student=personnel_result.id, subjects=subjects_result.id, credit=credit,score=score)
-            # if serialiser.is_valid():
-            #     serialiser.save()
-            return Response(serialiser.data, status=status.HTTP_201_CREATED)
-        else:
-            return Response(serialiser.errors, status=status.HTTP_400_BAD_REQUEST)
+            obj, created = StudentSubjectsScore.objects.update_or_create(
+                                        student_id=personnel_result.id,
+                                        subjects_id=subjects_result.id,
+            
+                                        # update these fields, or create a new object with these values
+                                        defaults={
+                                            'credit': credit, 
+                                            'score': score,  
+                                }
+            )
+
+            dict["data_pattern"].append({ 
+                        "student": obj.student.first_name+""+obj.student.last_name, 
+                        "subject": obj.subjects.title, 
+                        "credit": obj.credit,
+                        "score": obj.score,
+                        })
+            print ("Json result : ",dict)
+
+            return JsonResponse(dict, status=status.HTTP_201_CREATED)
+        return JsonResponse(dict, status=status.HTTP_400_BAD_REQUEST)
+            
 
         subjects_context = [{"id": 1, "title": "Math"}, {"id": 2, "title": "Physics"}, {"id": 3, "title": "Chemistry"},
                             {"id": 4, "title": "Algorithm"}, {"id": 5, "title": "Coding"}]
@@ -173,6 +186,7 @@ class StudentSubjectsScoreDetailsAPIView(APIView):
                     grade_point_average = "F"
 
                 print("Grade :",grade_point_average)
+
                 personnel = Personnel.objects.filter(id=res.id)
                 
 
@@ -1072,8 +1086,6 @@ class SchoolStructureAPIView(APIView):
 
         info = list(SchoolStructure.objects.all().values())
         response = {'title': info}
-        schoolStructure_detail = SchoolStructure.objects.all()
-        schoolStructure_Serializer = SchoolStructureSerializer(schoolStructure_detail, many=True)
         return JsonResponse(response, safe=False)
 
         your_result = []
