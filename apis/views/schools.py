@@ -114,7 +114,7 @@ class StudentSubjectsScoreDetailsAPIView(APIView):
 
         """
 
-        #  example_context_data = {
+        # example_context_data = {
         #     "student":
         #         {
         #             "id": "primary key of student in database",
@@ -140,21 +140,81 @@ class StudentSubjectsScoreDetailsAPIView(APIView):
         #     "grade_point_average": "grade point average",
         # }
 
-        stuSybScore = StudentSubjectsScore.objects.all()
-        student_id = kwargs.get("id", None)
-        print("student_id : ",student_id)
-        if student_id is not None:
-            stuSybScore = StudentSubjectsScore.objects.filter(student=student_id)
+        id = kwargs.get("id", None)
+        
+        if id is not None:
+            stuSybScore = StudentSubjectsScore.objects.filter(id=id)
+            
+            for res in stuSybScore:
+                scoreResult = res.score
+                print("Score :",scoreResult)
 
-            field_name = 'score'
-            score = StudentSubjectsScore._meta.get_field(field_name)
-            score_value = getattr(stuSybScore, score.attname)
-            print("Score : ",score_value)
-            # qs_json = serializers.serialize('json', stuSybScore)
-            # print("Json : ",qs_json)
+                #logic cal grade input score
+                if 80 <= scoreResult <= 100:
+                    grade_point_average = "A"
+                if 75 <= scoreResult <= 80:
+                    grade_point_average = "B+"
+                if 70 <= scoreResult <= 75:
+                    grade_point_average = "B"
+                if 65 <= scoreResult <= 70:
+                    grade_point_average = "C+"
+                if 60 <= scoreResult <= 65:
+                    grade_point_average = "C"
+                if 55 <= scoreResult <= 60:
+                    grade_point_average = "D+"
+                if 50 <= scoreResult <= 55:
+                    grade_point_average = "D"
+                elif scoreResult < 50:
+                    grade_point_average = "F"
 
-        StudentSubjectsScore_Serializer = StudentSubjectsScoreSerializer(stuSybScore, many=True)
-        return JsonResponse(StudentSubjectsScore_Serializer.data, safe=False)
+                print("Grade :",grade_point_average)
+                personnel = Personnel.objects.filter(id=res.id)
+
+                # example_context_data = []
+                # for per in personnel:
+                #     item = {'grade_point_average': grade_point_average, 'data': []}   #Add key(data)-value(empty list)
+                #     #append to `data`
+                #     item['data'].append({
+                #         "id": res.id,
+                #         "student": res.student,
+                #         "subjects": res.subjects,
+                #         "credit": res.credit,
+                #         "score": res.score
+                #             }
+                #         )
+                #     example_context_data.append(item)
+                # print(example_context_data)
+
+
+                # example_context_data = {
+                #     "student":
+                #         {
+                #             "id": id,
+                #             "full_name": "student's full name",
+                #             "school": "student's school name"
+                #         },
+
+                #     "subject_detail": [
+                #         {
+                #         "subject": "subject's title 1",
+                #                     "credit": "subject's credit 1",
+                #                     "score": "subject's score 1",
+                #                     "grade": "subject's grade 1",
+                #                 },
+                #                 {
+                #                     "subject": "subject's title 2",
+                #                     "credit": "subject's credit 2",
+                #                     "score": "subject's score 2",
+                #                     "grade": "subject's grade 2",
+                #                 },
+                #             ],
+
+                #             "grade_point_average": grade_point_average,
+                #         }
+
+        serializer = StudentSubjectsScoreSerializer(stuSybScore, many=True)
+       
+        return JsonResponse(serializer.data, safe=False)
 
 
 class PersonnelDetailsAPIView(APIView):

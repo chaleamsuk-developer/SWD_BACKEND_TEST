@@ -11,11 +11,6 @@ class SubjectsSerializer(serializers.ModelSerializer):
     class Meta:
         model = Subjects
         fields = ('title')
-        
-class StudentSubjectsScoreSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = StudentSubjectsScore
-        fields = ('student','subjects','credit','score')
 
 class SchoolsSerializer(serializers.ModelSerializer):
     class Meta:
@@ -23,13 +18,21 @@ class SchoolsSerializer(serializers.ModelSerializer):
         fields = ('title')
 
 class ClassesSerializer(serializers.ModelSerializer):
-    schools_set = SchoolsSerializer(many=True, read_only=True)
+    schools = SchoolsSerializer(many=True, read_only=True)
     class Meta:
         model = Classes
-        fields = ('class_order', 'schools_set')
+        fields = ('class_order','schools')
 
 class PersonnelSerializer(serializers.ModelSerializer):
-    classes_set = ClassesSerializer(many=True, read_only=True)
+    classes = ClassesSerializer(many=True, read_only=True)
     class Meta:
         model = Personnel
-        fields = ('first_name','last_name','personnel_type','classes_set')
+        fields = ('first_name','last_name','personnel_type','classes')
+
+class StudentSubjectsScoreSerializer(serializers.ModelSerializer):
+    personel = PersonnelSerializer(many=True, read_only=True)
+    subject = SubjectsSerializer(many=True, read_only=True)
+    
+    class Meta:
+        model = StudentSubjectsScore
+        fields = ('student','subjects','credit','score','personel','subject')
